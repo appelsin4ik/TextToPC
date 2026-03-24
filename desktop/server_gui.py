@@ -4,6 +4,9 @@ import queue
 from datetime import datetime
 import os
 import sys
+import json
+import tkinter.messagebox as mbox
+import winreg
 
 import pyperclip
 import customtkinter as ctk
@@ -33,6 +36,10 @@ def resource_path(relative_path):
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
+
+def app_data_path(filename):
+    base_dir = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else os.path.abspath(".")
+    return os.path.join(base_dir, filename)
 
 
 @app.route("/", methods=["GET"])
@@ -315,7 +322,9 @@ class TextBridgeApp(ctk.CTk):
         self.minsize(820, 560)
 
         self.ip = get_local_ip()
-        self.messages = []
+        self.history_file = app_data_path("history.json")
+        self.history_enabled = self.load_history_enabled_setting()
+        self.messages = self.load_history() if self.history_enabled else []
         self.is_topmost = False
 
         self.configure(fg_color="#0b1220")
@@ -324,6 +333,8 @@ class TextBridgeApp(ctk.CTk):
         self.server_thread.start()
 
         self.build_ui()
+        if self.messages:
+            self.render_messages()
         self.poll_queue()
 
     def build_ui(self):
@@ -417,6 +428,47 @@ class TextBridgeApp(ctk.CTk):
         )
         self.clear_btn.pack(side="left")
 
+        self.copy_latest_btn = ctk.CTkButton(
+            self.buttons_wrap,
+            text="Copy latest",
+            width=115,
+            height=36,
+            corner_radius=12,
+            fg_color="#22314c",
+            hover_color="#2e456d",
+            text_color="white",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            command=self.copy_latest
+        )
+        self.copy_latest_btn.pack(side="left", padx=(8, 8))
+
+        self.history_btn = ctk.CTkButton(
+            self.buttons_wrap,
+            text="History ON",
+            width=115,
+            height=36,
+            corner_radius=12,
+            fg_color="#166534",
+            hover_color="#15803d",
+            text_color="white",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            command=self.toggle_history
+        )
+        self.history_btn.pack(side="left", padx=(0, 8))
+
+        if self.history_enabled:
+            self.history_btn.configure(
+                text="History ON",
+                fg_color="#166534",
+                hover_color="#15803d"
+            )
+        else:
+            self.history_btn.configure(
+                text="History OFF",
+                fg_color="#7f1d1d",
+                hover_color="#991b1b"
+            )
+
         self.url_label = ctk.CTkLabel(
             self.info_card,
             text=f"http://{self.ip}:5000",
@@ -439,6 +491,16 @@ class TextBridgeApp(ctk.CTk):
         )
         self.status_label.pack(side="left")
 
+        self.stats_var = ctk.StringVar(value="Saved: 0 | File: 0 B | History: ON")
+
+        self.stats_label = ctk.CTkLabel(
+            self.status_bar,
+            textvariable=self.stats_var,
+            font=ctk.CTkFont(size=13),
+            text_color="#96a8c9"
+        )
+        self.stats_label.pack(side="right")
+
         # Messages area
         self.chat_card = ctk.CTkFrame(
             self.outer,
@@ -459,9 +521,16 @@ class TextBridgeApp(ctk.CTk):
         self.chat_scroll.pack(fill="both", expand=True, padx=12, pady=12)
 
         self.render_empty_state()
+        self.update_stats()
 
     def set_status(self, text):
         self.status_var.set(text)
+
+    def copy_latest(self):
+        if self.messages:
+            self.copy_text(self.messages[-1]["text"])
+        else:
+            self.set_status("No messages yet")
 
     def copy_text(self, text):
         pyperclip.copy(text)
@@ -519,7 +588,10 @@ class TextBridgeApp(ctk.CTk):
 
     def clear_history(self):
         self.messages.clear()
+        if self.history_enabled:
+            self.save_history()
         self.render_empty_state()
+        self.update_stats()
         self.set_status("History cleared")
 
     def poll_queue(self):
@@ -528,11 +600,15 @@ class TextBridgeApp(ctk.CTk):
         while not message_queue.empty():
             msg = message_queue.get()
             self.messages.append(msg)
+            self.messages = self.messages[-300:]
+            self.save_history()
+            self.update_stats()
             updated = True
             self.set_status("New text received and copied")
 
         if updated:
             self.render_messages()
+            self.update_stats()
 
         self.after(200, self.poll_queue)
 
@@ -560,6 +636,112 @@ class TextBridgeApp(ctk.CTk):
         else:
             self.title("TextBridge")
 
+    def load_history(self):
+        try:
+            if os.path.exists(app_data_path("history.json")):
+                with open(app_data_path("history.json"), "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        return data[-300:]  # храним последние 300 сообщений
+        except Exception:
+            pass
+        return []
+
+    def save_history(self):
+        if not self.history_enabled:
+            return
+
+        try:
+            with open(self.history_file, "w", encoding="utf-8") as f:
+                json.dump(self.messages[-300:], f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            self.set_status(f"History save error: {e}")
+
+    def toggle_history(self):
+        if self.history_enabled:
+            confirm = mbox.askyesno(
+                "Disable history",
+                "Отключить сохранение истории и удалить history.json?"
+            )
+            if not confirm:
+                return
+
+            self.history_enabled = False
+            self.save_history_enabled_setting()
+            self.messages.clear()
+
+            try:
+                if os.path.exists(self.history_file):
+                    os.remove(self.history_file)
+            except Exception as e:
+                self.set_status(f"Delete error: {e}")
+                return
+
+            self.history_btn.configure(
+                text="History OFF",
+                fg_color="#7f1d1d",
+                hover_color="#991b1b"
+            )
+            self.render_empty_state()
+            self.update_stats()
+            self.set_status("History disabled and file removed")
+        else:
+            self.history_enabled = True
+            self.save_history_enabled_setting()
+            self.history_btn.configure(
+                text="History ON",
+                fg_color="#166534",
+                hover_color="#15803d"
+            )
+            self.save_history()
+            self.update_stats()
+            self.set_status("History enabled")
+
+    def get_history_size_bytes(self):
+        try:
+            if os.path.exists(self.history_file):
+                return os.path.getsize(self.history_file)
+        except Exception:
+            pass
+        return 0
+
+    def format_bytes(self, size):
+        if size < 1024:
+            return f"{size} B"
+        if size < 1024 * 1024:
+            return f"{size / 1024:.1f} KB"
+        return f"{size / (1024 * 1024):.2f} MB"
+
+    def update_stats(self):
+        count = len(self.messages) if self.history_enabled else 0
+        size = self.get_history_size_bytes() if self.history_enabled else 0
+        state = "ON" if self.history_enabled else "OFF"
+        self.stats_var.set(
+            f"Saved: {count} | File: {self.format_bytes(size)} | History: {state}"
+        )
+
+    def load_history_enabled_setting(self):
+        try:
+            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\TextBridge")
+            value, _ = winreg.QueryValueEx(key, "HistoryEnabled")
+            return bool(value)
+        except FileNotFoundError:
+            return True
+        except Exception:
+            return True
+
+    def save_history_enabled_setting(self):
+        try:
+            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\TextBridge")
+            winreg.SetValueEx(
+                key,
+                "HistoryEnabled",
+                0,
+                winreg.REG_DWORD,
+                1 if self.history_enabled else 0
+            )
+        except Exception as e:
+            self.set_status(f"Settings save error: {e}")
 
 if __name__ == "__main__":
     app_ui = TextBridgeApp()

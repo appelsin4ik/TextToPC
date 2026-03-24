@@ -1,4 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+dist/
+build/
+*.spec
+history.json
+
+# Desktop extras
+desktop/history.json
+
+# Android / IntelliJ
+android/.gradle/
+android/.idea/
+android/local.properties
+android/build/
+android/app/build/
+
+# Root IDE files
+.idea/
+.gradle/
+.kotlin/
 /.vscode
-/build
-/dist
-/TextBridge.spec
