@@ -2,8 +2,6 @@
 
 > Send text from your phone to your PC instantly.
 
----
-
 ## ✨ Features
 
 - ✍️ Simple text input
@@ -12,15 +10,12 @@
 - 🔗 Works with desktop TextBridge app
 - 📡 No accounts, no login
 
----
-
 ## 🚀 Setup
 
 ### 1. Open Project
 
 Open the `android/` folder in **Android Studio**
 
----
 
 ### 2. Build APK
 
@@ -30,14 +25,12 @@ Build → Build APK(s)
 
 APK will be located at: ( __app/build/outputs/apk/debug/__ )
 
----
 
 ### 3. Install
 
 - Transfer APK to your phone
 - Install it (allow unknown sources)
 
----
 
 ## ⚙️ Configuration
 

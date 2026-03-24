@@ -2,8 +2,6 @@
 
 > Receive text from your Android phone instantly on your Windows PC.
 
----
-
 ## ✨ Features
 
 - 📥 Receives text over local network
@@ -15,17 +13,13 @@
 - 🔍 Select and copy text manually
 - 📊 Message stats (count + size)
 
----
-
 ## ⚙️ Requirements
 
 - Windows
 - Python 3.10+
 - Same Wi-Fi network as Android device
 
----
-
-### Dependencies
+## Dependencies
 
 ```bash
 pip install -r requirements.txt

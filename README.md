@@ -11,8 +11,6 @@ Perfect for quickly transferring:
 - 🧠 Ideas
 - 📦 Code snippets
 
----
-
 ## ✨ Features
 
 - ⚡ Instant text transfer over Wi-Fi
@@ -25,8 +23,6 @@ Perfect for quickly transferring:
 - 🎨 Smooth animated message bubbles
 - 🧩 Simple and minimal setup
 
----
-
 ## 🧱 Project Structure
 
 ```bash
@@ -37,8 +33,6 @@ TextBridge/
 └─ .gitignore
 ```
 
----
-
 ## ⚙️ How It Works
 
 1. The desktop app runs a local server on your PC
@@ -46,8 +40,6 @@ TextBridge/
 3. The PC receives it instantly
 4. Text is automatically copied to clipboard
 5. Messages appear in a styled UI
-
----
 
 ## 🚀 Quick Start
 
@@ -116,5 +108,5 @@ Personal project — free to use and modify.
 
 ### ⛓️ Links
 
-[> Text Bridge - Desktop Setup](desktop/README.md)
+[> Text Bridge - Desktop Setup](desktop/README.md) <p>
 [> Text Bridge - Android Setup](android/README.md)
